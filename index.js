@@ -82,7 +82,7 @@ async function run() {
       }
     });
 
-    // user related api
+    // user user
     app.post('/users', async (req, res) => {
       const user = req.body;
 
@@ -95,6 +95,15 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     })
+    
+    // get a user info by email from db
+    app.get('/user/:email', async (req, res) => {
+      const email = req.params.email
+      const result = await userCollection.findOne({ email })
+      res.send(result)
+    })
+
+    // 
     
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
