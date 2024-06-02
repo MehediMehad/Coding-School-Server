@@ -51,6 +51,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const userCollection = client.db("aweiDb").collection("users");
+    const workSheetCollection = client.db("aweiDb").collection("workSheets");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -103,7 +104,15 @@ async function run() {
       res.send(result)
     })
 
-    // 
+
+    // work-sheet
+    app.post('/workSheets', async (req, res) =>{
+      const item = req.body
+      const result = await workSheetCollection.insertOne(item)
+      res.send(result)
+    })
+
+
     
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
