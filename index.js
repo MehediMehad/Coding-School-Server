@@ -34,7 +34,7 @@ const verifyToken = async (req, res, next) => {
   });
 };
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, Timestamp } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6u1ikeh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -50,7 +50,7 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    const roomsCollection = client.db("awei").collection("users");
+    const userCollection = client.db("aweiDb").collection("users");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -81,6 +81,20 @@ async function run() {
         res.status(500).send(err);
       }
     });
+
+    // user related api
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+
+      const query = {email: user?.email}
+      const existingUser = await userCollection.findOne(query)
+      if (existingUser) {
+        return res.send({message: 'user already exist' , insertedId: null})
+      }
+      
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    })
     
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
