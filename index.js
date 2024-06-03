@@ -84,36 +84,45 @@ async function run() {
     });
 
     // user user
-    app.post('/users', async (req, res) => {
+    app.post("/users", async (req, res) => {
       const user = req.body;
 
-      const query = {email: user?.email}
-      const existingUser = await userCollection.findOne(query)
+      const query = { email: user?.email };
+      const existingUser = await userCollection.findOne(query);
       if (existingUser) {
-        return res.send({message: 'user already exist' , insertedId: null})
+        return res.send({ message: "user already exist", insertedId: null });
       }
-      
+
       const result = await userCollection.insertOne(user);
       res.send(result);
-    })
-    
-    // get a user info by email from db
-    app.get('/user/:email', async (req, res) => {
-      const email = req.params.email
-      const result = await userCollection.findOne({ email })
-      res.send(result)
-    })
+    });
 
+    // get a user info by email from db
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.findOne({ email });
+      res.send(result);
+    });
 
     // work-sheet
-    app.post('/workSheets', async (req, res) =>{
-      const item = req.body
-      const result = await workSheetCollection.insertOne(item)
-      res.send(result)
-    })
+    app.post("/workSheets", async (req, res) => {
+      const item = req.body;
+      const result = await workSheetCollection.insertOne(item);
+      res.send(result);
+    });
 
+    // get a work-sheet info by email from db
 
-    
+    app.get(
+      '/workSheet/:email',
+      async (req, res) => {
+        const email = req.params.email
+        let query = { 'email': email }
+        const result = await workSheetCollection.find(query).toArray()
+        res.send(result)
+      }
+    )
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
