@@ -114,6 +114,20 @@ async function run() {
 
     })
 
+    app.patch('/employees/update/:email', async (req, res) =>{
+      const email = req.params.email
+      const user = req.body
+      console.log(user, email);
+      const query = {email}
+      const updateDoc ={
+        $set:{
+          ...user
+        }
+      }
+      const result = await userCollection.updateOne(query, updateDoc)
+      res.send(result)
+    })
+
     // work-sheet
     app.post("/workSheets", async (req, res) => {
       const item = req.body;
