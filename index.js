@@ -103,6 +103,16 @@ async function run() {
       const result = await userCollection.findOne({ email });
       res.send(result);
     });
+    // get employees
+    app.get('/employees', async(req, res) =>{
+      try{
+        const employees = await userCollection.find({role:'Employee'}).toArray()
+        res.send(employees)
+      }catch{
+        res.status(500).send({message:"Error"})
+      }
+
+    })
 
     // work-sheet
     app.post("/workSheets", async (req, res) => {
