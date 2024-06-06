@@ -4,8 +4,9 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const port = process.env.PORT || 5000;
-
+// TODO: verify em verify admin
 // middleware
 const corsOptions = {
   origin: ["http://localhost:5173", "http://localhost:5174"],
@@ -20,7 +21,7 @@ app.use(cookieParser());
 // Verify Token Middleware
 const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
-  console.log(token);
+  // console.log(token);
   if (!token) {
     return res.status(401).send({ message: "unauthorized access" });
   }
@@ -34,7 +35,7 @@ const verifyToken = async (req, res, next) => {
   });
 };
 
-const { MongoClient, ServerApiVersion, Timestamp } = require("mongodb");
+const { MongoClient, ServerApiVersion, Timestamp, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6u1ikeh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -52,6 +53,7 @@ async function run() {
     await client.connect();
     const userCollection = client.db("aweiDb").collection("users");
     const workSheetCollection = client.db("aweiDb").collection("workSheets");
+    const paymentsCollection = client.db("aweiDb").collection("payments");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -82,6 +84,23 @@ async function run() {
         res.status(500).send(err);
       }
     });
+        // create-payment-intent
+        app.post('/create-payment-intent', verifyToken, async (req, res) => {
+          const salary = req.body.salary
+          const salaryInCent = parseFloat(salary) * 100
+          if (!salary || salaryInCent < 1) return
+          // generate clientSecret
+          const { client_secret } = await stripe.paymentIntents.create({
+            amount: salaryInCent,
+            currency: 'usd',
+            // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+            automatic_payment_methods: {
+              enabled: true,
+            },
+          })
+          // send client secret as response
+          res.send({ clientSecret: client_secret })
+        })
 
     // user user
     app.post("/users", async (req, res) => {
@@ -117,7 +136,6 @@ async function run() {
     app.patch('/employees/update/:email', async (req, res) =>{
       const email = req.params.email
       const user = req.body
-      console.log(user, email);
       const query = {email}
       const updateDoc ={
         $set:{
@@ -146,6 +164,20 @@ async function run() {
         res.send(result)
       }
     )
+    // payment 
+    app.post('/payments', verifyToken, async (req, res) =>{ 
+      const paymentData = req.body;
+      const result = await paymentsCollection.insertOne(paymentData)
+      const paymentId = paymentData?.employeeId
+      const query = {_id: new ObjectId(paymentId)}
+      const updateDoc = {
+        $set:{ payment: true}
+      }
+      const updatedPayment = await userCollection.updateOne(query, updateDoc)
+      console.log(updatedPayment);
+
+      res.send({result, updatedPayment})
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
