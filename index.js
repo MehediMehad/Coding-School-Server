@@ -4,7 +4,7 @@ const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 // TODO: verify em verify admin
 // middleware
@@ -35,7 +35,12 @@ const verifyToken = async (req, res, next) => {
   });
 };
 
-const { MongoClient, ServerApiVersion, Timestamp, ObjectId } = require("mongodb");
+const {
+  MongoClient,
+  ServerApiVersion,
+  Timestamp,
+  ObjectId,
+} = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6u1ikeh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -84,23 +89,23 @@ async function run() {
         res.status(500).send(err);
       }
     });
-        // create-payment-intent
-        app.post('/create-payment-intent', verifyToken, async (req, res) => {
-          const salary = req.body.salary
-          const salaryInCent = parseFloat(salary) * 100
-          if (!salary || salaryInCent < 1) return
-          // generate clientSecret
-          const { client_secret } = await stripe.paymentIntents.create({
-            amount: salaryInCent,
-            currency: 'usd',
-            // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
-            automatic_payment_methods: {
-              enabled: true,
-            },
-          })
-          // send client secret as response
-          res.send({ clientSecret: client_secret })
-        })
+    // create-payment-intent
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
+      const salary = req.body.salary;
+      const salaryInCent = parseFloat(salary) * 100;
+      if (!salary || salaryInCent < 1) return;
+      // generate clientSecret
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: salaryInCent,
+        currency: "usd",
+        // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      // send client secret as response
+      res.send({ clientSecret: client_secret });
+    });
 
     // user user
     app.post("/users", async (req, res) => {
@@ -123,28 +128,29 @@ async function run() {
       res.send(result);
     });
     // get employees
-    app.get('/employees', async(req, res) =>{
-      try{
-        const employees = await userCollection.find({role:'Employee'}).toArray()
-        res.send(employees)
-      }catch{
-        res.status(500).send({message:"Error"})
+    app.get("/employees", async (req, res) => {
+      try {
+        const employees = await userCollection
+          .find({ role: "Employee" })
+          .toArray();
+        res.send(employees);
+      } catch {
+        res.status(500).send({ message: "Error" });
       }
+    });
 
-    })
-
-    app.patch('/employees/update/:email', async (req, res) =>{
-      const email = req.params.email
-      const user = req.body
-      const query = {email}
-      const updateDoc ={
-        $set:{
-          ...user
-        }
-      }
-      const result = await userCollection.updateOne(query, updateDoc)
-      res.send(result)
-    })
+    app.patch("/employees/update/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email };
+      const updateDoc = {
+        $set: {
+          ...user,
+        },
+      };
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     // work-sheet
     app.post("/workSheets", async (req, res) => {
@@ -155,29 +161,65 @@ async function run() {
 
     // get a work-sheet info by email from db
 
-    app.get(
-      '/workSheet/:email',
-      async (req, res) => {
-        const email = req.params.email
-        let query = { 'email': email }
-        const result = await workSheetCollection.find(query).toArray()
-        res.send(result)
-      }
-    )
-    // payment 
-    app.post('/payments', verifyToken, async (req, res) =>{ 
+    app.get("/workSheet/:email", async (req, res) => {
+      const email = req.params.email;
+      let query = { email: email };
+      const result = await workSheetCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    // get all users data from db
+    app.get("/payments", verifyToken,  async (req, res) => {
+      const result = await paymentsCollection.find().toArray();
+      res.send(result);
+    });
+
+    // get a payments info by id from db
+    app.get("/payments/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await paymentsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // payment
+    app.post("/payments", verifyToken, async (req, res) => {
       const paymentData = req.body;
-      const result = await paymentsCollection.insertOne(paymentData)
-      const paymentId = paymentData?.employeeId
-      const query = {_id: new ObjectId(paymentId)}
+      const result = await paymentsCollection.insertOne(paymentData);
+      const paymentId = paymentData?.employeeId;
+      const query = { _id: new ObjectId(paymentId) };
       const updateDoc = {
-        $set:{ payment: true}
-      }
-      const updatedPayment = await userCollection.updateOne(query, updateDoc)
+        $set: { payment: true },
+      };
+      const updatedPayment = await userCollection.updateOne(query, updateDoc);
       console.log(updatedPayment);
 
-      res.send({result, updatedPayment})
-    })
+      res.send({ result, updatedPayment });
+    });
+    
+    // 
+    app.get('/employee-list', async (req, res) => {
+      const { page = 1, limit = 5 } = req.query;
+    
+      try {
+        const payments = await paymentsCollection.find()
+          .sort({ payYear: 1, payMonth: 1 })  
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit))
+          .toArray();
+    
+        const count = await paymentsCollection.countDocuments();
+    
+        res.send({
+          payments,
+          totalPages: Math.ceil(count / limit),
+          currentPage: parseInt(page)
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Something went wrong' });
+      }
+    });
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
