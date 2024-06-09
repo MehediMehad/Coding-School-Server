@@ -129,15 +129,72 @@ async function run() {
     });
 
     // get all verified employees and HR
-    app.get('/verified/employees', async (req, res) => {
+    app.get("/verified/employees", async (req, res) => {
       try {
         const users = await userCollection.find({ status: true }).toArray();
         res.status(200).json(users);
       } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch users' });
+        res.status(500).json({ error: "Failed to fetch users" });
       }
     });
 
+    // Fire an employee
+    app.post("/employees/fire/:id", (req, res) => {
+      const id = req.params.id;
+      employeesCollection.updateOne(
+        { _id: ObjectId(id) },
+        { $set: { fired: true } },
+        (err, result) => {
+          if (err) return res.send(err);
+          res.send(result);
+        }
+      );
+    });
+// -----------------------------------------------------------------TODO--------------------------
+    // Make an employee HR
+    app.post("/employees/make-hr/:id", (req, res) => {
+      const id = req.params.id;
+      employeesCollection.updateOne(
+        { _id: ObjectId(id) },
+        { $set: { role: "HR" } },
+        (err, result) => {
+          if (err) return res.send(err);
+          res.send(result);
+        }
+      );
+    });
+    // Adjust salary
+    app.post("/employees/adjust-salary/:id", (req, res) => {
+      const id = req.params.id;
+      const { salary } = req.body;
+      employeesCollection.updateOne(
+        { _id: ObjectId(id) },
+        { $set: { salary } },
+        (err, result) => {
+          if (err) return res.send(err);
+          res.send(result);
+        }
+      );
+    });
+    // Update salary
+    app.put("/employee/:id/salary", async (req, res) => {
+      const { id } = req.params;
+      const { newSalary } = req.body;
+      const employee = await collection.findOne({ _id: new ObjectId(id) });
+
+      if (newSalary > employee.salary) {
+        await collection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { salary: newSalary } }
+        );
+        res.status(200).send("Salary updated successfully");
+      } else {
+        res
+          .status(400)
+          .send("New salary must be greater than the current salary");
+      }
+    });
+    // ---------------------------------------------------------------------------TODO---------------------------------------------
 
     // get employees
     app.get("/employees", async (req, res) => {
@@ -181,7 +238,7 @@ async function run() {
     });
 
     // get all users data from db
-    app.get("/payments", verifyToken,  async (req, res) => {
+    app.get("/payments", verifyToken, async (req, res) => {
       const result = await paymentsCollection.find().toArray();
       res.send(result);
     });
@@ -194,19 +251,20 @@ async function run() {
       res.send(result);
     });
 
-    // get 
-    app.get('/details/:slug', async (req, res) => {
+    // get
+    app.get("/details/:slug", async (req, res) => {
       const slug = req.params.slug;
-      const employee = await paymentsCollection.findOne({ $or: [{ email: slug }, { employeeId: slug }] });
+      const employee = await paymentsCollection.findOne({
+        $or: [{ email: slug }, { employeeId: slug }],
+      });
       if (employee) {
-          res.json(employee);
+        res.json(employee);
       } else {
-          res.status(404).send('Employee not found');
+        res.status(404).send("Employee not found");
       }
-  });
+    });
 
-
-    // payment 
+    // payment
     app.post("/payments", verifyToken, async (req, res) => {
       const paymentData = req.body;
       const result = await paymentsCollection.insertOne(paymentData);
@@ -220,49 +278,53 @@ async function run() {
 
       res.send({ result, updatedPayment });
     });
-    
-    // 
-    app.get('/employee-list', async (req, res) => {
+
+    //
+    app.get("/employee-list", async (req, res) => {
       const { page = 1, limit = 5 } = req.query;
-    
+
       try {
-        const payments = await paymentsCollection.find()
-          .sort({ payYear: 1, payMonth: 1 })  
+        const payments = await paymentsCollection
+          .find()
+          .sort({ payYear: 1, payMonth: 1 })
           .skip((page - 1) * limit)
           .limit(parseInt(limit))
           .toArray();
-    
+
         const count = await paymentsCollection.countDocuments();
-    
+
         res.send({
           payments,
           totalPages: Math.ceil(count / limit),
-          currentPage: parseInt(page)
+          currentPage: parseInt(page),
         });
       } catch (error) {
-        res.status(500).json({ error: 'Something went wrong' });
+        res.status(500).json({ error: "Something went wrong" });
       }
     });
 
     // progress
-    app.get('/progress', async (req, res) => {
+    app.get("/progress", async (req, res) => {
       const { employee, month } = req.query;
-  
+
       let query = {};
       if (employee) {
         query.name = employee;
       }
       if (month) {
         const startDate = new Date(`${month}-01`);
-        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        const endDate = new Date(
+          startDate.getFullYear(),
+          startDate.getMonth() + 1,
+          0
+        );
         query.date = { $gte: startDate, $lte: endDate };
       }
-  
+
       // const collection = db.collection('your_collection_name');
       const records = await workSheetCollection.find(query).toArray();
       res.send(records);
     });
-
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
