@@ -182,6 +182,17 @@ async function run() {
       res.send(result);
     });
 
+    // 
+    app.get('/details/:slug', async (req, res) => {
+      const slug = req.params.slug;
+      const employee = await paymentsCollection.findOne({ $or: [{ email: slug }, { employeeId: slug }] });
+      if (employee) {
+          res.json(employee);
+      } else {
+          res.status(404).send('Employee not found');
+      }
+  });
+
     // payment
     app.post("/payments", verifyToken, async (req, res) => {
       const paymentData = req.body;
