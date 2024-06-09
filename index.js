@@ -127,6 +127,18 @@ async function run() {
       const result = await userCollection.findOne({ email });
       res.send(result);
     });
+
+    // get all verified employees and HR
+    app.get('/verified/employees', async (req, res) => {
+      try {
+        const users = await userCollection.find({ status: true }).toArray();
+        res.status(200).json(users);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch users' });
+      }
+    });
+
+
     // get employees
     app.get("/employees", async (req, res) => {
       try {
@@ -182,7 +194,7 @@ async function run() {
       res.send(result);
     });
 
-    // 
+    // get 
     app.get('/details/:slug', async (req, res) => {
       const slug = req.params.slug;
       const employee = await paymentsCollection.findOne({ $or: [{ email: slug }, { employeeId: slug }] });
@@ -193,7 +205,8 @@ async function run() {
       }
   });
 
-    // payment
+
+    // payment 
     app.post("/payments", verifyToken, async (req, res) => {
       const paymentData = req.body;
       const result = await paymentsCollection.insertOne(paymentData);
@@ -229,6 +242,25 @@ async function run() {
       } catch (error) {
         res.status(500).json({ error: 'Something went wrong' });
       }
+    });
+
+    // progress
+    app.get('/progress', async (req, res) => {
+      const { employee, month } = req.query;
+  
+      let query = {};
+      if (employee) {
+        query.name = employee;
+      }
+      if (month) {
+        const startDate = new Date(`${month}-01`);
+        const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+        query.date = { $gte: startDate, $lte: endDate };
+      }
+  
+      // const collection = db.collection('your_collection_name');
+      const records = await workSheetCollection.find(query).toArray();
+      res.send(records);
     });
 
 
