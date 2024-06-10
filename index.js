@@ -9,7 +9,12 @@ const port = process.env.PORT || 5000;
 // TODO: verify em verify admin
 // middleware
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173", 
+    "http://localhost:5174",
+    "https://awei-b5fd9.web.app",
+    "https://awei-b5fd9.firebaseapp.com",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -55,7 +60,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     const userCollection = client.db("aweiDb").collection("users");
     const workSheetCollection = client.db("aweiDb").collection("workSheets");
     const paymentsCollection = client.db("aweiDb").collection("payments");
@@ -121,6 +126,7 @@ async function run() {
       const result = await userCollection.insertOne(user);
       res.send(result);
     });
+    
 
     // get a user info by email from db
     app.get("/user/:email", async (req, res) => {
@@ -153,16 +159,17 @@ async function run() {
     });
 // -----------------------------------------------------------------TODO--------------------------
     // Make an employee HR
-    app.post("/employees/make-hr/:id", (req, res) => {
-      const id = req.params.id;
-      employeesCollection.updateOne(
-        { _id: ObjectId(id) },
-        { $set: { role: "HR" } },
-        (err, result) => {
-          if (err) return res.send(err);
-          res.send(result);
-        }
-      );
+    app.patch("/admin/update/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const query = { email };
+      const updateDoc = {
+        $set: {
+          ...user,
+        },
+      };
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
     });
     // Adjust salary
     app.post("/employees/adjust-salary/:id", (req, res) => {
@@ -209,7 +216,7 @@ async function run() {
       }
     });
 
-    app.patch("/employees/update/:email", async (req, res) => {
+    app.patch("/admin/update/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
       const query = { email };
@@ -344,10 +351,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
