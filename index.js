@@ -59,6 +59,7 @@ async function run() {
     const userCollection = client.db("aweiDb").collection("users");
     const workSheetCollection = client.db("aweiDb").collection("workSheets");
     const paymentsCollection = client.db("aweiDb").collection("payments");
+    const messageCollection = client.db("aweiDb").collection("message");
 
     // auth related api
     app.post("/jwt", async (req, res) => {
@@ -324,6 +325,22 @@ async function run() {
       // const collection = db.collection('your_collection_name');
       const records = await workSheetCollection.find(query).toArray();
       res.send(records);
+    });
+    
+        // messageA TODO
+    app.post("/messageA", async (req, res) => {
+      const item = req.body;
+      const result = await messageCollection.insertOne(item);
+      res.send(result);
+    });
+
+    app.get('/messageA', async (req, res) => {
+      try {
+        const messages = await messageCollection.find({}).toArray();
+        res.status(200).json(messages);
+      } catch (error) {
+        res.status(500).send('Error fetching messages');
+      }
     });
 
     // Send a ping to confirm a successful connection
